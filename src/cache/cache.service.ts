@@ -6,11 +6,12 @@ export class CacheService {
   /**
    * Obtener un valor de caché por clave (respuesta directa, no historial)
    */
-  get(key: string): string | null {
+  get(key: string, ttlOverride?: number): string | null {
     const cached = this.cache.get(key);
     if (!cached) return null;
     const now = Date.now();
-    if (now - cached.timestamp > this.TTL) {
+    const ttl = ttlOverride ?? this.TTL;
+    if (now - cached.timestamp > ttl) {
       this.cache.delete(key);
       return null;
     }
@@ -37,12 +38,13 @@ export class CacheService {
   /**
    * Guardar un valor de caché por clave (respuesta directa, no historial)
    */
-  set(key: string, value: string): void {
+  set(key: string, value: string, ttlOverride?: number): void {
     const now = Date.now();
     let history: CacheHistoryEntry[] = [];
+    const ttl = ttlOverride ?? this.TTL;
     if (this.cache.has(key)) {
       const cached = this.cache.get(key);
-      if (cached && now - cached.timestamp <= this.TTL) {
+      if (cached && now - cached.timestamp <= ttl) {
         history = cached.history;
       }
     }
@@ -59,7 +61,7 @@ export class CacheService {
    * Cada clave tiene un array de entradas {question, answer, timestamp}
    */
   private cache: Map<string, { history: CacheHistoryEntry[]; timestamp: number }> = new Map();
-  private readonly TTL = 3600000; // 1 hora en milisegundos
+  private readonly TTL = parseInt(process.env.CACHE_TTL || '300000', 10); // TTL en ms, por defecto 5 min
   private readonly MAX_CACHE_SIZE = 100; // Máximo de entradas en caché
   private readonly MAX_HISTORY = 10; // Máximo historial por clave
 
